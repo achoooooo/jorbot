@@ -6,11 +6,12 @@ from sys import exit
 
 import random
 
+from jparse import (Tokenizer, JorParse)
+
 # roll an n-sided die
 def roll(n):
     return random.randint(1, n)
 
-from dparse import Tokenizer
 
 parser = argparse.ArgumentParser(
     prog = "jorbot-cli",
@@ -24,6 +25,7 @@ def crash(msg="there was a problem"):
     parser.print_help()
     exit(1)
 
+'''
 def do_roll_logic(exp):
     # Parser (lol)
     match = re.match('(\d\d*)?[dD]?(\d\d*)', exp)
@@ -42,6 +44,7 @@ def do_roll_logic(exp):
     for i in range(numDice):
         r = roll(numFaces)
         print(f"d{numFaces} #{i+1}:\t{r}")
+'''
 
 def main():
     args = parser.parse_args()
@@ -49,8 +52,15 @@ def main():
 
     tokens = Tokenizer.tokenize(exp)
 
-    for t in tokens:
-        print("Type:", t["type"], "Value", t["value"])
+    p = JorParse()
+    ast = p.parse(tokens)
+
+    # print("ast: ", ast.getType(), ast.getCount(), ast.getSides())
+    count = ast.getCount()
+    faces = ast.getSides()
+    for i, _c in enumerate(range(count)):
+        print(f"Roll #{i+1}: {roll(faces)}")
+        
 
 
 main()

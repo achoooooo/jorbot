@@ -109,16 +109,51 @@ St4 := Int | Die | LPAREN St0 RPAREN
 Die := [Int] DIEOP Int
 Int := DIGIT DIGIT*
 
+# Other idea
+Statement := Func | Exp
+Func :=  Identifier "(" [Args | ɛ] ")"
+Args :=  Exp ["," Exp]*
+
+
+Int := DIGIT DIGIT*
+Die := DIEOP Int
 
 '''
+
 
 from enum import Enum
 from string import ascii_letters
 
-class Token(Enum):
-    INT = 1
-    CHAR = 2
-    IDENT = 3
+class TokenType(Enum):
+    End    = 0
+    Int    = 1
+    Ident  = 2
+    DieOp  = 3
+
+class Token:
+    def __init__(self, type: TokenType) -> None:
+        self.type = type
+    
+    def getType(self) -> TokenType:
+        return self.type
+
+class TokenEnd(Token):
+    def __init__(self):
+        super().__init__(TokenType.End)
+
+class TokenInt(Token):
+    def __init__(self, value):
+        super().__init__(TokenType.Int)
+        self.value = value
+
+class TokenIdent(Token):
+    def __init__(self, name):
+        super().__init__(TokenType.Ident)
+        self.name = name
+
+class TokenDieOp(Token):
+    def __init__(self):
+        super().__init__(TokenType.DieOp)
 
 # Used internally by tokenizer to group similar characters
 class _CharType(Enum):
@@ -164,19 +199,111 @@ class Tokenizer:
             if ctype != _CharType.TERM:
                 tokenObj = None
                 if ctype == _CharType.DIGIT:
-                    tokenObj = {"type": Token.INT, "value": int(token)}
+                    tokenObj = TokenInt(int(token))
                 elif ctype == _CharType.LETTER and len(token) > 1:
-                    tokenObj = {"type": Token.IDENT, "value": token}
+                    tokenObj = TokenIdent(token)
+                elif ctype == _CharType.LETTER and token == 'd':
+                    tokenObj = TokenDieOp()
                 else:
-                    tokenObj = {"type": Token.CHAR, "value": token}
+                    # TODO: Make tokens for individual terminators
+                    tokenObj = TokenIdent(token)
                 tokens.append(tokenObj)
 
             ii += len(token)
+        
+        tokens.append(TokenEnd())
 
         return tokens
             
+class JorParseError(Exception):
+    def __init__(self, message):
+        self.message = message
 
-class JParse:
-    tokens
-    def __init__():
-        pass
+class ASTNodeType(Enum):
+    Error = 0
+    DiceList = 1
+
+class ASTNode:
+    def __init__(self, type: ASTNodeType) -> None:
+        self.type = type
+    
+    def getType(self) -> ASTNodeType:
+        return self.type
+
+class ASTError(ASTNode):
+    def __init__(self, message) -> None:
+        super().__init__(ASTNodeType.Error)
+        self.message = message
+
+class ASTDiceList(ASTNode):
+    def __init__(self, sides, count=1) -> None:
+        super().__init__(ASTNodeType.DiceList)
+        self.sides = sides
+        self.count = count
+    
+    def getCount(self):
+        return self.count
+    
+    def getSides(self):
+        return self.sides
+
+class JorParse:
+    def __init__(self):
+        self.tokens = []
+        self.pos = None
+
+    def parse(self, tokens) -> ASTDiceList:
+        self.tokens = tokens
+        self.pos = 0
+
+        parse = None
+
+        try:
+            # Right now all we parse is a dice op, ie. 2d20
+            parse = self.parseDice()
+            end = self.__peek()
+            if end.getType() is not TokenType.End:
+                raise JorParseError("Unexpected extra tokens")
+        except JorParseError as e:
+            return ASTError(e.message)
+        
+        return parse
+
+    def __peek(self) -> Token:
+        if self.pos is None:
+            return None
+        if self.pos >= len(self.tokens):
+            return None
+        return self.tokens[self.pos]
+
+    def __eat(self) -> Token:
+        tok = self.__peek()
+        if tok is not None:
+            self.pos += 1
+        return tok
+
+    # D -> Num? 'd' Num
+    def parseDice(self):
+        count = 1
+
+        if self.__peek().getType() != TokenType.DieOp:
+            countTok = self.expectInt("Expected a number of sides, or a 'd'")
+            count = countTok.value
+            if count < 1:
+                raise JorParseError("Expected at least one die")
+        
+        dieTok = self.__eat()
+
+        if dieTok.getType() != TokenType.DieOp:
+            print("woah nelly, this op is", dieTok.getType())
+            raise JorParseError("Expected a 'd' to identify a die, ie. 'd20'")
+        
+        sideTok = self.expectInt("Expected a number of faces after 'd'")
+        
+        return ASTDiceList(sideTok.value, count)
+    
+    def expectInt(self, errmsg) -> TokenInt:
+        tok = self.__peek()
+        if tok.getType() != TokenType.Int:
+            raise JorParseError(errmsg)
+        return self.__eat()
