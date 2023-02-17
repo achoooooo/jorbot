@@ -74,8 +74,8 @@ lang examples:
 -6^2 -> -(^(6, 2)), ^ is higher than -
 d6^2 -> ^(d(6), 2), d is higher than ^
 
-20d10 -> 
-20 
+20d10 ->
+20
 
 
 context-free grammar
@@ -133,7 +133,7 @@ class TokenType(Enum):
 class Token:
     def __init__(self, type: TokenType) -> None:
         self.type = type
-    
+
     def getType(self) -> TokenType:
         return self.type
 
@@ -170,9 +170,9 @@ class Tokenizer:
             return _CharType.LETTER
         if c.isspace():
             return _CharType.TERM
-        
+
         return _CharType.SYMBOL
-    
+
     def __eat_matching_symbols(str, start, ctype):
         if start < 0 or start >= len(str):
             return ""
@@ -195,7 +195,7 @@ class Tokenizer:
 
             if ctype == _CharType.DIGIT or ctype == _CharType.LETTER:
                 token += Tokenizer.__eat_matching_symbols(text, ii+1, ctype)
-            
+
             if ctype != _CharType.TERM:
                 tokenObj = None
                 if ctype == _CharType.DIGIT:
@@ -210,11 +210,11 @@ class Tokenizer:
                 tokens.append(tokenObj)
 
             ii += len(token)
-        
+
         tokens.append(TokenEnd())
 
         return tokens
-            
+
 class JorParseError(Exception):
     def __init__(self, message):
         self.message = message
@@ -226,7 +226,7 @@ class ASTNodeType(Enum):
 class ASTNode:
     def __init__(self, type: ASTNodeType) -> None:
         self.type = type
-    
+
     def getType(self) -> ASTNodeType:
         return self.type
 
@@ -240,10 +240,10 @@ class ASTDiceList(ASTNode):
         super().__init__(ASTNodeType.DiceList)
         self.sides = sides
         self.count = count
-    
+
     def getCount(self):
         return self.count
-    
+
     def getSides(self):
         return self.sides
 
@@ -266,7 +266,7 @@ class JorParse:
                 raise JorParseError("Unexpected extra tokens")
         except JorParseError as e:
             return ASTError(e.message)
-        
+
         return parse
 
     def __peek(self) -> Token:
@@ -291,17 +291,17 @@ class JorParse:
             count = countTok.value
             if count < 1:
                 raise JorParseError("Expected at least one die")
-        
+
         dieTok = self.__eat()
 
         if dieTok.getType() != TokenType.DieOp:
             print("woah nelly, this op is", dieTok.getType())
             raise JorParseError("Expected a 'd' to identify a die, ie. 'd20'")
-        
+
         sideTok = self.expectInt("Expected a number of faces after 'd'")
-        
+
         return ASTDiceList(sideTok.value, count)
-    
+
     def expectInt(self, errmsg) -> TokenInt:
         tok = self.__peek()
         if tok.getType() != TokenType.Int:

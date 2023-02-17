@@ -31,14 +31,14 @@ def do_roll_logic(exp):
     match = re.match('(\d\d*)?[dD]?(\d\d*)', exp)
     if match is None:
         crash("this isn't the right input, idiot")
-    
+
     numDice = 1
     if match.group(1) is not None:
         numDice = int(match.group(1))
-    
+
     if match.group(2) is None:
         crash("somehow you're missing the dice size but the regex worked?")
-    
+
     numFaces = int(match.group(2))
 
     for i in range(numDice):
@@ -60,7 +60,7 @@ def main():
     faces = ast.getSides()
     for i, _c in enumerate(range(count)):
         print(f"Roll #{i+1}: {roll(faces)}")
-        
+
 
 
 main()
